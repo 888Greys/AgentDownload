@@ -119,10 +119,19 @@ async def download_message(client: TelegramClient, message, channel_name: str):
     log(f"[done] {save_path.name}")
 
 
-async def bulk_download(client: TelegramClient, channel: str):
+async def bulk_download(client: TelegramClient, channel, all_dialogs: list):
     log(f"[bulk] Starting history download: {channel}")
-    entity = await client.get_entity(channel)
-    channel_name = getattr(entity, "title", channel)
+    entity = None
+    # For numeric IDs, find the entity from already-loaded dialogs
+    if isinstance(channel, int):
+        target_id = abs(channel) % 10**10  # strip -100 prefix
+        for d in all_dialogs:
+            if getattr(d.entity, "id", None) == target_id:
+                entity = d.entity
+                break
+    if entity is None:
+        entity = await client.get_entity(channel)
+    channel_name = getattr(entity, "title", str(channel))
     count = 0
     async for message in client.iter_messages(entity, reverse=True):
         if is_video(message):
@@ -231,13 +240,14 @@ async def main():
         me = await client.get_me()
         log(f"[auth] Logged in as: {me.first_name}")
 
-        # Populate entity cache so numeric IDs can be resolved
+        # Load ALL dialogs to populate entity cache
         log("[auth] Loading dialogs...")
-        await client.get_dialogs()
+        all_dialogs = await client.get_dialogs(limit=None)
+        log(f"[auth] Loaded {len(all_dialogs)} dialogs")
 
         if mode in ("bulk", "both"):
             for ch in CHANNELS:
-                await bulk_download(client, ch)
+                await bulk_download(client, ch, all_dialogs)
 
         if mode in ("monitor", "both"):
             await monitor(client)
