@@ -21,3 +21,6 @@ CHANNELS = [
 # --- Download settings ---
 DOWNLOAD_DIR = "downloads"      # folder where videos are saved
 MAX_FILE_SIZE_MB = 0            # 0 = no limit; e.g. 500 to skip files > 500 MB
+
+# --- Status web server ---
+STATUS_PORT = 3005              # visit http://your-server-ip:3005 to see live status
