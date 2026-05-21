@@ -231,6 +231,10 @@ async def main():
         me = await client.get_me()
         log(f"[auth] Logged in as: {me.first_name}")
 
+        # Populate entity cache so numeric IDs can be resolved
+        log("[auth] Loading dialogs...")
+        await client.get_dialogs()
+
         if mode in ("bulk", "both"):
             for ch in CHANNELS:
                 await bulk_download(client, ch)
