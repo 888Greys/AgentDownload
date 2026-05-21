@@ -46,28 +46,30 @@ def apply_watermark(path: Path) -> Path:
     if not WATERMARK_TEXT:
         return path
     out_path = path.with_stem(path.stem + "_wm")
-    # Diagonal faded watermark at top-right using a clean sans-serif font
-    vf = (
-        f"drawtext=text='{WATERMARK_TEXT}'"
-        f":fontsize=38"
-        f":fontcolor=white@0.35"
-        f":shadowcolor=black@0.25:shadowx=2:shadowy=2"
-        f":angle=-0.45"
-        f":x=w-tw-40:y=40"
-    )
-    # Try to use a nicer font if available
-    font_candidates = [
+    # Pick best available font
+    font_str = ""
+    for f in [
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-    ]
-    for font in font_candidates:
-        if Path(font).exists():
-            vf += f":fontfile={font}"
+    ]:
+        if Path(f).exists():
+            font_str = f":fontfile={f}"
             break
+
+    # Diagonal faded watermark: draw text on transparent canvas, rotate, overlay top-right
+    filter_complex = (
+        f"color=black@0:size=260x55,"
+        f"drawtext=text='{WATERMARK_TEXT}'{font_str}"
+        f":fontsize=36:fontcolor=white@0.4"
+        f":shadowcolor=black@0.2:shadowx=1:shadowy=1"
+        f":x=5:y=8,"
+        f"rotate=angle=-0.45:fillcolor=none@0[wm];"
+        f"[0:v][wm]overlay=W-w-40:25"
+    )
     cmd = [
         "ffmpeg", "-y", "-i", str(path),
-        "-vf", vf,
+        "-filter_complex", filter_complex,
         "-codec:a", "copy",
         "-loglevel", "error",
         str(out_path),
