@@ -42,26 +42,32 @@ def log(msg: str):
 
 # --- Helpers ---
 
-POSITION_MAP = {
-    "topleft":     "x=20:y=20",
-    "topright":    "x=w-tw-20:y=20",
-    "bottomleft":  "x=20:y=h-th-20",
-    "bottomright": "x=w-tw-20:y=h-th-20",
-}
-
 def apply_watermark(path: Path) -> Path:
     if not WATERMARK_TEXT:
         return path
-    pos = POSITION_MAP.get(WATERMARK_POSITION, POSITION_MAP["bottomright"])
     out_path = path.with_stem(path.stem + "_wm")
+    # Diagonal faded watermark at top-right using a clean sans-serif font
+    vf = (
+        f"drawtext=text='{WATERMARK_TEXT}'"
+        f":fontsize=38"
+        f":fontcolor=white@0.35"
+        f":shadowcolor=black@0.25:shadowx=2:shadowy=2"
+        f":angle=-0.45"
+        f":x=w-tw-40:y=40"
+    )
+    # Try to use a nicer font if available
+    font_candidates = [
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    ]
+    for font in font_candidates:
+        if Path(font).exists():
+            vf += f":fontfile={font}"
+            break
     cmd = [
         "ffmpeg", "-y", "-i", str(path),
-        "-vf", (
-            f"drawtext=text='{WATERMARK_TEXT}'"
-            f":fontsize=24:fontcolor=white@0.8"
-            f":borderw=2:bordercolor=black@0.6"
-            f":{pos}"
-        ),
+        "-vf", vf,
         "-codec:a", "copy",
         "-loglevel", "error",
         str(out_path),
