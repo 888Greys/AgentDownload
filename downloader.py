@@ -57,19 +57,15 @@ def apply_watermark(path: Path) -> Path:
             font_str = f":fontfile={f}"
             break
 
-    # Diagonal faded watermark: draw text on transparent canvas, rotate, overlay top-right
-    filter_complex = (
-        f"color=black@0:size=260x55,"
+    vf = (
         f"drawtext=text='{WATERMARK_TEXT}'{font_str}"
-        f":fontsize=36:fontcolor=white@0.4"
-        f":shadowcolor=black@0.2:shadowx=1:shadowy=1"
-        f":x=5:y=8,"
-        f"rotate=angle=-0.45:fillcolor=none@0[wm];"
-        f"[0:v][wm]overlay=W-w-40:25"
+        f":fontsize=36:fontcolor=white@0.35"
+        f":shadowcolor=black@0.3:shadowx=2:shadowy=2"
+        f":x=w-tw-30:y=30"
     )
     cmd = [
         "ffmpeg", "-y", "-i", str(path),
-        "-filter_complex", filter_complex,
+        "-vf", vf,
         "-codec:a", "copy",
         "-loglevel", "error",
         str(out_path),
