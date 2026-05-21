@@ -9,6 +9,7 @@ Telegram Video Downloader
 import asyncio
 import json
 import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +18,7 @@ from aiohttp import web
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaDocument
 
-from config import API_ID, API_HASH, SESSION_NAME, CHANNELS, DOWNLOAD_DIR, MAX_FILE_SIZE_MB, STATUS_PORT, FORWARD_TO
+from config import API_ID, API_HASH, SESSION_NAME, CHANNELS, DOWNLOAD_DIR, MAX_FILE_SIZE_MB, STATUS_PORT, FORWARD_TO, WATERMARK_TEXT, WATERMARK_POSITION
 
 
 # --- Shared state for status dashboard ---
@@ -40,6 +41,39 @@ def log(msg: str):
 
 
 # --- Helpers ---
+
+POSITION_MAP = {
+    "topleft":     "x=20:y=20",
+    "topright":    "x=w-tw-20:y=20",
+    "bottomleft":  "x=20:y=h-th-20",
+    "bottomright": "x=w-tw-20:y=h-th-20",
+}
+
+def apply_watermark(path: Path) -> Path:
+    if not WATERMARK_TEXT:
+        return path
+    pos = POSITION_MAP.get(WATERMARK_POSITION, POSITION_MAP["bottomright"])
+    out_path = path.with_stem(path.stem + "_wm")
+    cmd = [
+        "ffmpeg", "-y", "-i", str(path),
+        "-vf", (
+            f"drawtext=text='{WATERMARK_TEXT}'"
+            f":fontsize=24:fontcolor=white@0.8"
+            f":borderw=2:bordercolor=black@0.6"
+            f":{pos}"
+        ),
+        "-codec:a", "copy",
+        "-loglevel", "error",
+        str(out_path),
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode == 0:
+        path.unlink()
+        out_path.rename(path)
+    else:
+        log(f"[watermark error] {result.stderr.decode()[:200]}")
+    return path
+
 
 def sanitize(name: str) -> str:
     return re.sub(r'[\\/*?:"<>|]', "_", name).strip()
@@ -113,6 +147,10 @@ async def download_message(client: TelegramClient, message, channel_name: str):
     state["active_download"] = {"channel": channel_name, "file": save_path.name, "size": size_str}
 
     await client.download_media(message, file=str(save_path))
+
+    if WATERMARK_TEXT:
+        log(f"[watermark] adding '{WATERMARK_TEXT}' to {save_path.name}")
+        await asyncio.get_event_loop().run_in_executor(None, apply_watermark, save_path)
 
     state["active_download"] = None
     state["totals"][channel_name] = state["totals"].get(channel_name, 0) + 1

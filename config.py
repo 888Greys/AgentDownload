@@ -28,3 +28,8 @@ STATUS_PORT = 3005              # visit http://your-server-ip:3005 to see live s
 # --- Forward to Telegram ---
 # "me" = your Saved Messages. Or use a chat ID / @username to forward elsewhere.
 FORWARD_TO = "me"
+
+# --- Watermark ---
+# Text burned onto every downloaded video. Set to "" to disable.
+WATERMARK_TEXT = "@acegirlske"   # change to your text
+WATERMARK_POSITION = "bottomright"  # topleft | topright | bottomleft | bottomright
