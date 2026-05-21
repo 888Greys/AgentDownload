@@ -1,0 +1,14 @@
+# Session file (contains your login token — keep private)
+*.session
+*.session-journal
+
+# Downloads folder
+downloads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files
+.env
