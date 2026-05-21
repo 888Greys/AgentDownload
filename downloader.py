@@ -17,7 +17,7 @@ from aiohttp import web
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaDocument
 
-from config import API_ID, API_HASH, SESSION_NAME, CHANNELS, DOWNLOAD_DIR, MAX_FILE_SIZE_MB, STATUS_PORT
+from config import API_ID, API_HASH, SESSION_NAME, CHANNELS, DOWNLOAD_DIR, MAX_FILE_SIZE_MB, STATUS_PORT, FORWARD_TO
 
 
 # --- Shared state for status dashboard ---
@@ -117,6 +117,14 @@ async def download_message(client: TelegramClient, message, channel_name: str):
     state["active_download"] = None
     state["totals"][channel_name] = state["totals"].get(channel_name, 0) + 1
     log(f"[done] {save_path.name}")
+
+    # Forward original message to Saved Messages (or configured destination)
+    if FORWARD_TO:
+        try:
+            await client.forward_messages(FORWARD_TO, message)
+            log(f"[forwarded] {save_path.name} → {FORWARD_TO}")
+        except Exception as e:
+            log(f"[forward error] {e}")
 
 
 async def bulk_download(client: TelegramClient, channel, all_dialogs: list):
